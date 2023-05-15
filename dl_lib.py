@@ -1,107 +1,50 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
-import h5py
-from tqdm import tqdm
 
-def initialisation(X):
+def initialisation(X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     W = np.random.randn(X.shape[1], 1)
     b = np.random.randn(1)
     return (W, b)
 
-def model(X, W, b):
-    Z = np.dot(X, W) + b
-    A = 1/(1 + np.exp(-Z))
-    
+def modele(X: np.ndarray, W: np.ndarray, b: np.ndarray) -> np.ndarray:
+    Z = X.dot(W) + b
+    A = 1 / (1 + np.exp(-Z))
     return A
 
-def log_loss(A, y):
-    epsilon = 1e-15
-    
-    return 1 / len(y) * np.sum(-y * np.log(A + epsilon) - (1 - y) * np.log(1 - A + epsilon))
+def cout(A: np.ndarray, y: np.ndarray) -> float:
+    return -1 / len(y) * np.sum(y * np.log(A) + (1-y) * np.log(1 - A))
 
-def log_loss_norm(A, y, shape):
-    epsilon = 1e-15
-    
-    return 1 / len(y) * np.sum(-y * np.log(A + epsilon) - (1 - y) * np.log(1 - A + epsilon), axis=0).reshape(shape.shape)
-
-def gradients(A, X, y):
+def gradients(A: np.ndarray, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.float64]:
     dW = 1 / len(y) * np.dot(X.T, A - y)
     db = 1 / len(y) * np.sum(A - y)
-    
     return (dW, db)
 
-def update(dW, db, W, b, lr):
-    W = W - lr * dW
-    b = b - lr * db
-    
+def maj(dW: np.ndarray, db: np.float64, W: np.ndarray, b: np.ndarray, learningRate: float) -> tuple[np.ndarray, np.ndarray]:
+    W = W - learningRate * dW
+    b = b - learningRate * db
     return (W, b)
 
-def predict(X, W, b, proba = False):
-    A = model(X, W, b)
-    if proba:
-        print(A)
-    return A >= 0.5
+def prediction(X: np.ndarray, W: np.ndarray, b: np.ndarray) -> tuple[bool, np.ndarray]:
+    A = modele(X, W, b)
+    return (A >= 0.5, A)
 
-def neurone(X, y, X_test=0, y_test=0, lr = 0.1, nbr_iteration = 100):
+def neurone(X: np.ndarray, y: np.ndarray, learningRate: float=0.1, nCycles: int=100):
+    # init W, b
     W, b = initialisation(X)
-    
-    history = []
-    Loss = []
-    Loss_test = []
-    acc = []
-    acc_test = []
-    
-    # Apprentissage
-    for i in tqdm(range(nbr_iteration)):
-        
-        # Activations
-        A = model(X, W, b)
-        
-        if i % 10 == 0:
-            # Train
-            Loss.append(log_loss(A, y))
-            y_pred = predict(X, W, b)
-            acc.append(accuracy_score(y, y_pred))
-            
-            if X_test != 0 and y_test != 0:
-                # Test
-                A_test = model(X_test, W, b)
-            
-                Loss_test.append(log_loss(A_test, y_test))
-                y_pred = predict(X_test, W, b)
-                acc_test.append(accuracy_score(y_test, y_pred))
 
-        
-        # MAJ
+    Cout = []
+
+    for i in range(nCycles):
+        A = modele(X, W, b)
+        Cout.append(cout(A, y))
         dW, db = gradients(A, X, y)
-        W, b = update(dW, db, W, b, lr)
-        
-        # Historique
-        history.append([W, b, Loss, i])
+        W, b = maj(dW, db, W, b, learningRate)
+    
+    y_predict = prediction(X, W, b)[0] 
+    print(accuracy_score(y, y_predict)) # permet d'évaluer son niveau sur un dataset
 
-    plt.figure(figsize=(12, 4))
-    plt.subplot(1, 2, 1)         
-    plt.plot(Loss, label="Train Loss")
-    plt.plot(Loss_test, label="Test Loss")
-    plt.legend()
-    
-    plt.subplot(1, 2, 2)
-    plt.plot(acc, label="Train Acc")
-    plt.plot(acc_test, label="Test Acc")
-    plt.legend()
-    
-    plt.show()
-    
+    #plt.plot(Cout) # Montre la fonction cout
+    #plt.show()
+
     return (W, b)
-
-def load_data():
-    train_dataset = h5py.File('datasets/trainset.hdf5', "r")
-    X_train = np.array(train_dataset["X_train"][:]) # your train set features
-    y_train = np.array(train_dataset["Y_train"][:]) # your train set labels
-
-    test_dataset = h5py.File('datasets/testset.hdf5', "r")
-    X_test = np.array(test_dataset["X_test"][:]) # your train set features
-    y_test = np.array(test_dataset["Y_test"][:]) # your train set labels
-    
-    return X_train, y_train, X_test, y_test
