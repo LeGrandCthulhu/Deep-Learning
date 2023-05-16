@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 X, y = make_blobs(n_samples=100, n_features=2, centers=2, random_state=0)
 y = y.reshape((y.shape[0], 1))
 
-W, b = dl.neurone(X, y)
+W, b = dl.neurone(X, y, learningRate=0.2, nCycles=250)
 
 print(dl.prediction(np.array([2,1]), W, b))
 

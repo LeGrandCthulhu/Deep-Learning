@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
+import h5py
 
 def initialisation(X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     W = np.random.randn(X.shape[1], 1)
@@ -44,7 +45,18 @@ def neurone(X: np.ndarray, y: np.ndarray, learningRate: float=0.1, nCycles: int=
     y_predict = prediction(X, W, b)[0] 
     print(accuracy_score(y, y_predict)) # permet d'évaluer son niveau sur un dataset
 
-    #plt.plot(Cout) # Montre la fonction cout
-    #plt.show()
+    plt.plot(Cout) # Montre la fonction cout
+    plt.show()
 
     return (W, b)
+
+def load_data():
+    train_dataset = h5py.File('datasets/trainset.hdf5', "r")
+    X_train = np.array(train_dataset["X_train"][:]) 
+    y_train = np.array(train_dataset["Y_train"][:]) 
+
+    test_dataset = h5py.File('datasets/testset.hdf5', "r")
+    X_test = np.array(test_dataset["X_test"][:])
+    y_test = np.array(test_dataset["Y_test"][:])
+    
+    return X_train, y_train, X_test, y_test
