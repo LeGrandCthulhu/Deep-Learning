@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 import h5py
+from tqdm import tqdm
 
 def initialisation(X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     W = np.random.randn(X.shape[1], 1)
@@ -14,7 +15,8 @@ def modele(X: np.ndarray, W: np.ndarray, b: np.ndarray) -> np.ndarray:
     return A
 
 def cout(A: np.ndarray, y: np.ndarray) -> float:
-    return -1 / len(y) * np.sum(y * np.log(A) + (1-y) * np.log(1 - A))
+    epsilon = 1e-15
+    return -1 / len(y) * np.sum(y * np.log(A + epsilon) + (1-y) * np.log(1 - A + epsilon))  
 
 def gradients(A: np.ndarray, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.float64]:
     dW = 1 / len(y) * np.dot(X.T, A - y)
@@ -30,22 +32,41 @@ def prediction(X: np.ndarray, W: np.ndarray, b: np.ndarray) -> tuple[bool, np.nd
     A = modele(X, W, b)
     return (A >= 0.5, A)
 
-def neurone(X: np.ndarray, y: np.ndarray, learningRate: float=0.1, nCycles: int=100):
+def neurone(X: np.ndarray, y: np.ndarray, X_test: np.ndarray, y_test: np.ndarray, learningRate: float=0.1, nCycles: int=100):
     # init W, b
     W, b = initialisation(X)
 
-    Cout = []
+    trainLoss = []
+    trainAccuracy = []
+    testLoss = []
+    testAccuracy = []
 
-    for i in range(nCycles):
+    for i in tqdm(range(nCycles)):
         A = modele(X, W, b)
-        Cout.append(cout(A, y))
+
+        if i % 10 == 0:
+            trainLoss.append(cout(A, y))
+            y_predict = prediction(X, W, b)[0]
+            trainAccuracy.append(accuracy_score(y, y_predict))
+
+            A_test = modele(X_test, W, b)
+            testLoss.append(cout(A_test, y_test))
+            y_predict = prediction(X_test, W, b)[0]
+            testAccuracy.append(accuracy_score(y_test, y_predict))
+
         dW, db = gradients(A, X, y)
         W, b = maj(dW, db, W, b, learningRate)
     
-    y_predict = prediction(X, W, b)[0] 
-    print(accuracy_score(y, y_predict)) # permet d'évaluer son niveau sur un dataset
+    plt.figure(figsize=(12, 4))
+    plt.subplot(1, 2, 1)
+    plt.plot(trainLoss, label="train")
+    plt.plot(testLoss, label="test")
+    plt.legend()
 
-    plt.plot(Cout) # Montre la fonction cout
+    plt.subplot(1, 2, 2)
+    plt.plot(trainAccuracy, label="train")
+    plt.plot(testAccuracy, label="test")
+    plt.legend()
     plt.show()
 
     return (W, b)
